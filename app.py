@@ -3,7 +3,7 @@ import os
 
 app = Flask(__name__)
 
-DEFAULT_SAVE_PATH = r"\C:\Users\EBF1COB\OneDrive - Bosch Group\VRCS"
+DEFAULT_SAVE_PATH = r"\\kor2fs03\V-V--Testing$\03_Validation_Software\VRCS_GUI"
 os.makedirs(DEFAULT_SAVE_PATH, exist_ok=True)
 
 if not os.path.exists(DEFAULT_SAVE_PATH):
