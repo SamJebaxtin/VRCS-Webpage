@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Virtual Remote Control System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body onload="showScreen('optionScreen')">
+    <h1>Virtual Remote Control System</h1>
+
+    <input type="file" id="fileInput" accept=".txt" style="display:none" />
+
+    <div id="optionScreen" class="container active">
+        <h2>Select an Option</h2>
+        <button class="btn btn-blue" onclick="document.getElementById('fileInput').click()">Open Configuration</button>
+        <button class="btn btn-green" onclick="showScreen('fileScreen')">Create New Configuration</button>
+    </div>
+
+    <div id="fileScreen" class="container">
+        <h2>Enter Details</h2>
+        <input type="text" id="firstName" placeholder="Name">
+        <input type="text" id="lastName" placeholder="PC Name">
+        <input type="number" id="acCount" placeholder="Number of AC Lines">
+        <input type="number" id="dcCount" placeholder="Number of DC Lines">
+        <button class="btn btn-green" onclick="createFile()">Create</button>
+        <button class="btn btn-back" onclick="showScreen('optionScreen')">Back</button>
+    </div>
+
+    <div id="switchScreen" class="container">
+        <h3 id="fileName">File: </h3>
+		<br></br>
+        <h2><div class="section-title">AC Switches</div></h2>
+        <div id="acContainer" class="switch-container"></div>
+		<br></br>
+        <h2><div class="section-title">DC Switches</div></h2>
+        <div id="dcContainer" class="switch-container"></div>
+        <button class="btn btn-back" onclick="showScreen('optionScreen')">Back</button>
+    </div>
+
+    <div id="loading" class="loading">Loading...</div>
+
+    <script>
+        let currentFile = "";
+
+        function showScreen(id) {
+            document.querySelectorAll(".container").forEach(c => c.classList.remove("active"));
+            document.getElementById(id).classList.add("active");
+        }
+
+        function createFile() {
+            const firstName = document.getElementById("firstName").value.trim();
+            const lastName = document.getElementById("lastName").value.trim();
+            const acCount = parseInt(document.getElementById("acCount").value.trim());
+            const dcCount = parseInt(document.getElementById("dcCount").value.trim());
+
+            if (!firstName || !lastName || isNaN(acCount) || isNaN(dcCount)) {
+                alert("Enter all fields correctly.");
+                return;
+            }
+
+            fetch("/create_file", {
+                method: "POST",
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({firstName, lastName, acCount, dcCount})
+            })
+            .then(res => res.json())
+            .then(data => {
+                currentFile = data.filename;
+                document.getElementById("fileName").innerText = `File: ${currentFile}`;
+                showScreen("switchScreen");
+                loadSwitches(data.content);
+            });
+        }
+
+function loadSwitches(lines) {
+    const ac = document.getElementById("acContainer");
+    const dc = document.getElementById("dcContainer");
+    ac.innerHTML = "";
+    dc.innerHTML = "";
+
+    lines.forEach((line, index) => {
+        const [label, state] = line.split(": ");
+        const isOn = state && state.trim() === "ON"; // Ensure state is parsed correctly (handle extra spaces)
+        const buttonText = isOn ? 'ON' : 'OFF';
+        const switchClass = isOn ? 'on' : '';
+
+        const html = `
+            <div class="switch-box">
+                <p>${label}</p>
+                <button class="toggle-btn ${switchClass}" onclick="toggleSwitch(${index})">
+                    ${buttonText}
+                </button>
+            </div>`;
+
+        if (label.startsWith("AC")) {
+            ac.innerHTML += html; // For AC switches
+        } else if (label.startsWith("DC")) {
+            dc.innerHTML += html; // For DC switches
+        }
+    });
+}
+
+
+function toggleSwitch(index) {
+    fetch("/toggle", {
+        method: "POST",
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ index, filename: currentFile })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // Load the updated switches after toggling
+            loadSwitches(data.updated);
+        }
+    });
+}
+
+
+document.getElementById("fileInput").addEventListener("change", function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const content = e.target.result;
+        console.log("File content:", content); // Debugging line
+
+        fetch("/open_file", {
+            method: "POST",
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ content, filename: file.name })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                currentFile = file.name;
+                document.getElementById("fileName").innerText = `File: ${file.name}`;
+                showScreen("switchScreen");
+                loadSwitches(data.lines);
+            }
+        });
+    };
+    reader.readAsText(file);
+});
+
+
+		    window.onload = () => {
+        showScreen('optionScreen');
+        document.getElementById('loading').style.display = 'none';
+    }
+    </script>
+</body>
+</html>
