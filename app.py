@@ -14,11 +14,6 @@ if not os.path.exists(DEFAULT_SAVE_PATH):
 def index():
     return render_template('index.html')
 
-@app.route('/')
-def home():
-    return render_template('index.html')
-
-
 @app.route('/create_file', methods=['POST'])
 def create_file():
     data = request.json
@@ -80,7 +75,11 @@ def toggle():
         return jsonify(success=False, error=str(e))
 
 
+# if __name__ == '__main__':
+    # port = int(os.environ.get('PORT', 5000))  # this is the key line!
+    # app.run(host='0.0.0.0', port=port)
+	
+	
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # this is the key line!
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=5000, debug=True)
 
